@@ -34,11 +34,79 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-define(["require", "exports", "esri/Map", "esri/views/MapView"], function (require, exports, EsriMap, MapView) {
+define(["require", "exports", "esri/Map", "esri/views/MapView", "esri/Graphic", "esri/Viewpoint", "esri/tasks/Locator", "esri/Color", "esri/symbols"], function (require, exports, EsriMap, MapView, Graphic, Viewpoint, Locator, Color, symbols_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     (function () { return __awaiter(void 0, void 0, void 0, function () {
-        var map, view;
+        function calculateAddressLocation(person) {
+            return __awaiter(this, void 0, void 0, function () {
+                var SingleLine, response;
+                return __generator(this, function (_a) {
+                    switch (_a.label) {
+                        case 0:
+                            SingleLine = addresses[person];
+                            return [4 /*yield*/, locator.addressToLocations({
+                                    address: {
+                                        SingleLine: SingleLine
+                                    },
+                                    maxLocations: 1
+                                })];
+                        case 1:
+                            response = (_a.sent())[0];
+                            return [2 /*return*/, new Graphic({
+                                    attributes: {
+                                        person: person,
+                                        address: SingleLine
+                                    },
+                                    geometry: response.location,
+                                    symbol: new symbols_1.SimpleMarkerSymbol({
+                                        color: "red",
+                                        outline: {
+                                            width: 5,
+                                            color: new Color([255, 0, 0, 0.5])
+                                        },
+                                        size: 10
+                                    }),
+                                    popupTemplate: {
+                                        title: "{person}",
+                                        content: "{address}"
+                                    }
+                                })];
+                    }
+                });
+            });
+        }
+        function addressesToGraphics() {
+            return __awaiter(this, void 0, void 0, function () {
+                var promises, person;
+                return __generator(this, function (_a) {
+                    switch (_a.label) {
+                        case 0:
+                            promises = [];
+                            for (person in addresses) {
+                                promises.push(calculateAddressLocation(person));
+                            }
+                            return [4 /*yield*/, Promise.all(promises)];
+                        case 1: return [2 /*return*/, _a.sent()];
+                    }
+                });
+            });
+        }
+        function addressesOnMap() {
+            return __awaiter(this, void 0, void 0, function () {
+                var graphics;
+                return __generator(this, function (_a) {
+                    switch (_a.label) {
+                        case 0: return [4 /*yield*/, addressesToGraphics()];
+                        case 1:
+                            graphics = _a.sent();
+                            view.graphics.addMany(graphics);
+                            return [2 /*return*/];
+                    }
+                });
+            });
+        }
+        var map, view, addresses, locator, calculateButton;
         return __generator(this, function (_a) {
             map = new EsriMap({
                 basemap: "streets"
@@ -46,9 +114,27 @@ define(["require", "exports", "esri/Map", "esri/views/MapView"], function (requi
             view = new MapView({
                 map: map,
                 container: "viewDiv",
-                center: [-118.244, 34.052],
-                zoom: 12
+                viewpoint: Viewpoint.fromJSON({ "rotation": 0, "scale": 36978595.474472, "targetGeometry": { "spatialReference": { "latestWkid": 3857, "wkid": 102100 }, "x": -10984650.679317374, "y": 5097967.601478441 } })
             });
+            view.watch("center", function (center) {
+                console.log(JSON.stringify(view.viewpoint));
+            });
+            addresses = {
+                Solveig: "7831 Gray Eagle drive, Zionsville, IN 46077",
+                Joanna: "Springville, UT",
+                Rebecca: "Chandler, AZ",
+                Erik: "South Ogden, UT",
+                Ben: "4762 E TIMBERLINE RD, GILBERT, AZ 85297",
+                Spencer: "Mesa, Arizona",
+                Kristian: "10427 Beryl Ave., Mentone, CA 92359",
+                Alan: "Arizona City, AZ"
+            };
+            locator = new Locator({
+                url: "https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer"
+            });
+            calculateButton = document.getElementById("calculate");
+            view.ui.add(calculateButton, "bottom-left");
+            calculateButton.addEventListener("click", addressesOnMap);
             return [2 /*return*/];
         });
     }); })();
