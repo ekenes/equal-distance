@@ -34,7 +34,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-define(["require", "exports", "esri/Map", "esri/views/MapView", "esri/Graphic", "esri/Viewpoint", "esri/tasks/Locator", "esri/Color", "esri/symbols"], function (require, exports, EsriMap, MapView, Graphic, Viewpoint, Locator, Color, symbols_1) {
+define(["require", "exports", "esri/Map", "esri/views/MapView", "esri/Graphic", "esri/Viewpoint", "esri/tasks/Locator", "esri/Color", "esri/symbols", "esri/geometry/geometryEngine"], function (require, exports, EsriMap, MapView, Graphic, Viewpoint, Locator, Color, symbols_1, geometryEngine_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     (function () { return __awaiter(void 0, void 0, void 0, function () {
@@ -94,17 +94,44 @@ define(["require", "exports", "esri/Map", "esri/views/MapView", "esri/Graphic", 
         }
         function addressesOnMap() {
             return __awaiter(this, void 0, void 0, function () {
-                var graphics;
+                var graphics, boundary;
                 return __generator(this, function (_a) {
                     switch (_a.label) {
                         case 0: return [4 /*yield*/, addressesToGraphics()];
                         case 1:
                             graphics = _a.sent();
                             view.graphics.addMany(graphics);
+                            boundary = getConvexHull(graphics.map(function (graphic) { return graphic.geometry; }))[0];
+                            view.graphics.add(new Graphic({
+                                geometry: boundary,
+                                symbol: new symbols_1.SimpleFillSymbol({
+                                    style: "solid",
+                                    color: "rgba(0,0,255,0.1)",
+                                    outline: {
+                                        width: 2,
+                                        color: "blue"
+                                    }
+                                })
+                            }));
+                            view.graphics.add(new Graphic({
+                                geometry: boundary.centroid,
+                                symbol: new symbols_1.SimpleMarkerSymbol({
+                                    style: "x",
+                                    color: "black",
+                                    size: 10,
+                                    outline: {
+                                        width: 2,
+                                        color: "black"
+                                    }
+                                })
+                            }));
                             return [2 /*return*/];
                     }
                 });
             });
+        }
+        function getConvexHull(points) {
+            return geometryEngine_1.convexHull(points, true);
         }
         var map, view, addresses, locator, calculateButton;
         return __generator(this, function (_a) {
@@ -120,14 +147,14 @@ define(["require", "exports", "esri/Map", "esri/views/MapView", "esri/Graphic", 
                 console.log(JSON.stringify(view.viewpoint));
             });
             addresses = {
-                Solveig: "7831 Gray Eagle drive, Zionsville, IN 46077",
-                Joanna: "Springville, UT",
-                Rebecca: "Chandler, AZ",
-                Erik: "South Ogden, UT",
-                Ben: "4762 E TIMBERLINE RD, GILBERT, AZ 85297",
-                Spencer: "Mesa, Arizona",
-                Kristian: "10427 Beryl Ave., Mentone, CA 92359",
-                Alan: "Arizona City, AZ"
+                Sol: "7831 Gray Eagle drive, Zionsville, IN 46077",
+                Jo: "Springville, UT",
+                Beck: "4269 E Linda Ln, Gilbert, AZ 85234",
+                Ez: "4992 S 950 E, SOUTH OGDEN, UT 84403",
+                Beej: "4762 E TIMBERLINE RD, GILBERT, AZ 85297",
+                Penny: "Mesa, Arizona",
+                Kross: "10427 Beryl Ave., Mentone, CA 92359",
+                Agee: "Arizona City, AZ"
             };
             locator = new Locator({
                 url: "https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer"
