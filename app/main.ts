@@ -1,5 +1,6 @@
 import EsriMap = require("esri/Map");
 import MapView = require("esri/views/MapView");
+import Graphic = require("esri/Graphic");
 
 (async () => {
 
