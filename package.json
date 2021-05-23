@@ -1,0 +1,23 @@
+{
+  "name": "equal-distance",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ekenes/equal-distance.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ekenes/equal-distance/issues"
+  },
+  "homepage": "https://github.com/ekenes/equal-distance#readme",
+  "dependencies": {
+    "@types/arcgis-js-api": "^4.19.0"
+  }
+}
