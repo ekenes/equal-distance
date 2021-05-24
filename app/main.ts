@@ -4,9 +4,10 @@ import Graphic = require("esri/Graphic");
 import Viewpoint = require("esri/Viewpoint");
 import Locator = require("esri/tasks/Locator");
 import Color = require("esri/Color");
-import { SimpleFillSymbol, SimpleMarkerSymbol } from "esri/symbols";
-import { Geometry, Point, Polygon } from "esri/geometry";
-import { convexHull } from "esri/geometry/geometryEngine";
+import Measurement = require("esri/widgets/Measurement");
+import { SimpleFillSymbol, SimpleLineSymbol, SimpleMarkerSymbol } from "esri/symbols";
+import { Geometry, Point, Polygon, Polyline } from "esri/geometry";
+import { convexHull, geodesicLength } from "esri/geometry/geometryEngine";
 
 (async () => {
 
@@ -20,19 +21,52 @@ import { convexHull } from "esri/geometry/geometryEngine";
     viewpoint: Viewpoint.fromJSON({"rotation":0,"scale":36978595.474472,"targetGeometry":{"spatialReference":{"latestWkid":3857,"wkid":102100},"x":-10984650.679317374,"y":5097967.601478441}})
   });
 
-  view.watch("center", (center) => {
-    console.log(JSON.stringify(view.viewpoint));
-  });
+  view.ui.add(new Measurement({
+    view,
+    activeTool: "distance"
+  }), "top-right");
 
   const addresses = {
-    Sol: "7831 Gray Eagle drive, Zionsville, IN 46077",
-    Jo: "Springville, UT",
-    Beck: "4269 E Linda Ln, Gilbert, AZ 85234",
-    Ez: "4992 S 950 E, SOUTH OGDEN, UT 84403",
-    Beej: "4762 E TIMBERLINE RD, GILBERT, AZ 85297",
-    Penny: "Mesa, Arizona",
-    Kross: "10427 Beryl Ave., Mentone, CA 92359",
-    Agee: "Arizona City, AZ"
+    Sol: {
+      address: "7831 Gray Eagle drive, Zionsville, IN 46077",
+      prelimDistance: 0,
+      finalDistance: 0
+    },
+    Jo: {
+      address: "Springville, UT",
+      prelimDistance: 0,
+      finalDistance: 0
+    },
+    Beck: {
+      address: "4269 E Linda Ln, Gilbert, AZ 85234",
+      prelimDistance: 0,
+      finalDistance: 0
+    },
+    Ez: {
+      address: "4992 S 950 E, SOUTH OGDEN, UT 84403",
+      prelimDistance: 0,
+      finalDistance: 0
+    },
+    Beej: {
+      address: "4762 E TIMBERLINE RD, GILBERT, AZ 85297",
+      prelimDistance: 0,
+      finalDistance: 0
+    },
+    Penny: {
+      address: "Mesa, Arizona",
+      prelimDistance: 0,
+      finalDistance: 0
+    },
+    Kross: {
+      address: "10427 Beryl Ave., Mentone, CA 92359",
+      prelimDistance: 0,
+      finalDistance: 0
+    },
+    Agee: {
+      address: "Arizona City, AZ",
+      prelimDistance: 0,
+      finalDistance: 0
+    }
   };
 
   const locator = new Locator({
@@ -99,8 +133,8 @@ import { convexHull } from "esri/geometry/geometryEngine";
       })
     }));
 
-
-    view.graphics.add(new Graphic({
+    const centerPoint = new Graphic({
+      attributes: {  },
       geometry: boundary.centroid,
       symbol: new SimpleMarkerSymbol({
         style: "x",
@@ -110,14 +144,70 @@ import { convexHull } from "esri/geometry/geometryEngine";
           width: 2,
           color: "black"
         }
-      })
-    }));
+      }),
+      popupTemplate: {
+        content: "Sol: {Sol}\nJo: {Jo}\nBeck: {Beck}\nEz: {Ez}\nBeej: {Beej}\nPenny: {Penny}\nKross: {Kross}\nAgee: {Agee}"
+      }
+    });
 
+    const distValues: number[] = []
+
+    graphics.forEach(graphic => {
+      const person = graphic.attributes.person;
+      const dist = calculateDistance(centerPoint.geometry as Point, graphic.geometry as Point);
+      distValues.push(dist);
+      addresses[person].prelimDistance = dist;
+      centerPoint.attributes[person] = dist;
+    });
+
+
+
+    const stddev = standardDeviation(distValues);
+    console.log("stddev: ", stddev);
+    console.log("addresses: ", addresses);
+
+    view.graphics.add(centerPoint);
 
   }
 
   function getConvexHull(points: Point[]){
     return convexHull(points as any, true);
   }
+
+  function calculateDistance(center: Point, vertex: Point){
+    const line = new Polyline({
+      paths: [[
+        [center.x, center.y],
+        [vertex.x, vertex.y]
+      ]]
+    });
+
+    return geodesicLength(line, "miles");
+  }
+
+
+function standardDeviation(values: number[]){
+  var avg = average(values);
+
+  var squareDiffs = values.map(function(value){
+    var diff = value - avg;
+    var sqrDiff = diff * diff;
+    return sqrDiff;
+  });
+
+  var avgSquareDiff = average(squareDiffs);
+
+  var stdDev = Math.sqrt(avgSquareDiff);
+  return stdDev;
+}
+
+function average(data:number[]){
+  var sum = data.reduce(function(sum, value){
+    return sum + value;
+  }, 0);
+
+  var avg = sum / data.length;
+  return avg;
+}
 
 })();

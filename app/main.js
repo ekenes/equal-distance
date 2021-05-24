@@ -34,7 +34,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-define(["require", "exports", "esri/Map", "esri/views/MapView", "esri/Graphic", "esri/Viewpoint", "esri/tasks/Locator", "esri/Color", "esri/symbols", "esri/geometry/geometryEngine"], function (require, exports, EsriMap, MapView, Graphic, Viewpoint, Locator, Color, symbols_1, geometryEngine_1) {
+define(["require", "exports", "esri/Map", "esri/views/MapView", "esri/Graphic", "esri/Viewpoint", "esri/tasks/Locator", "esri/Color", "esri/widgets/Measurement", "esri/symbols", "esri/geometry", "esri/geometry/geometryEngine"], function (require, exports, EsriMap, MapView, Graphic, Viewpoint, Locator, Color, Measurement, symbols_1, geometry_1, geometryEngine_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     (function () { return __awaiter(void 0, void 0, void 0, function () {
@@ -94,7 +94,7 @@ define(["require", "exports", "esri/Map", "esri/views/MapView", "esri/Graphic", 
         }
         function addressesOnMap() {
             return __awaiter(this, void 0, void 0, function () {
-                var graphics, boundary;
+                var graphics, boundary, centerPoint, distValues, stddev;
                 return __generator(this, function (_a) {
                     switch (_a.label) {
                         case 0: return [4 /*yield*/, addressesToGraphics()];
@@ -113,7 +113,8 @@ define(["require", "exports", "esri/Map", "esri/views/MapView", "esri/Graphic", 
                                     }
                                 })
                             }));
-                            view.graphics.add(new Graphic({
+                            centerPoint = new Graphic({
+                                attributes: {},
                                 geometry: boundary.centroid,
                                 symbol: new symbols_1.SimpleMarkerSymbol({
                                     style: "x",
@@ -123,8 +124,23 @@ define(["require", "exports", "esri/Map", "esri/views/MapView", "esri/Graphic", 
                                         width: 2,
                                         color: "black"
                                     }
-                                })
-                            }));
+                                }),
+                                popupTemplate: {
+                                    content: "Sol: {Sol}\nJo: {Jo}\nBeck: {Beck}\nEz: {Ez}\nBeej: {Beej}\nPenny: {Penny}\nKross: {Kross}\nAgee: {Agee}"
+                                }
+                            });
+                            distValues = [];
+                            graphics.forEach(function (graphic) {
+                                var person = graphic.attributes.person;
+                                var dist = calculateDistance(centerPoint.geometry, graphic.geometry);
+                                distValues.push(dist);
+                                addresses[person].prelimDistance = dist;
+                                centerPoint.attributes[person] = dist;
+                            });
+                            stddev = standardDeviation(distValues);
+                            console.log("stddev: ", stddev);
+                            console.log("addresses: ", addresses);
+                            view.graphics.add(centerPoint);
                             return [2 /*return*/];
                     }
                 });
@@ -132,6 +148,33 @@ define(["require", "exports", "esri/Map", "esri/views/MapView", "esri/Graphic", 
         }
         function getConvexHull(points) {
             return geometryEngine_1.convexHull(points, true);
+        }
+        function calculateDistance(center, vertex) {
+            var line = new geometry_1.Polyline({
+                paths: [[
+                        [center.x, center.y],
+                        [vertex.x, vertex.y]
+                    ]]
+            });
+            return geometryEngine_1.geodesicLength(line, "miles");
+        }
+        function standardDeviation(values) {
+            var avg = average(values);
+            var squareDiffs = values.map(function (value) {
+                var diff = value - avg;
+                var sqrDiff = diff * diff;
+                return sqrDiff;
+            });
+            var avgSquareDiff = average(squareDiffs);
+            var stdDev = Math.sqrt(avgSquareDiff);
+            return stdDev;
+        }
+        function average(data) {
+            var sum = data.reduce(function (sum, value) {
+                return sum + value;
+            }, 0);
+            var avg = sum / data.length;
+            return avg;
         }
         var map, view, addresses, locator, calculateButton;
         return __generator(this, function (_a) {
@@ -143,18 +186,51 @@ define(["require", "exports", "esri/Map", "esri/views/MapView", "esri/Graphic", 
                 container: "viewDiv",
                 viewpoint: Viewpoint.fromJSON({ "rotation": 0, "scale": 36978595.474472, "targetGeometry": { "spatialReference": { "latestWkid": 3857, "wkid": 102100 }, "x": -10984650.679317374, "y": 5097967.601478441 } })
             });
-            view.watch("center", function (center) {
-                console.log(JSON.stringify(view.viewpoint));
-            });
+            view.ui.add(new Measurement({
+                view: view,
+                activeTool: "distance"
+            }), "top-right");
             addresses = {
-                Sol: "7831 Gray Eagle drive, Zionsville, IN 46077",
-                Jo: "Springville, UT",
-                Beck: "4269 E Linda Ln, Gilbert, AZ 85234",
-                Ez: "4992 S 950 E, SOUTH OGDEN, UT 84403",
-                Beej: "4762 E TIMBERLINE RD, GILBERT, AZ 85297",
-                Penny: "Mesa, Arizona",
-                Kross: "10427 Beryl Ave., Mentone, CA 92359",
-                Agee: "Arizona City, AZ"
+                Sol: {
+                    address: "7831 Gray Eagle drive, Zionsville, IN 46077",
+                    prelimDistance: 0,
+                    finalDistance: 0
+                },
+                Jo: {
+                    address: "Springville, UT",
+                    prelimDistance: 0,
+                    finalDistance: 0
+                },
+                Beck: {
+                    address: "4269 E Linda Ln, Gilbert, AZ 85234",
+                    prelimDistance: 0,
+                    finalDistance: 0
+                },
+                Ez: {
+                    address: "4992 S 950 E, SOUTH OGDEN, UT 84403",
+                    prelimDistance: 0,
+                    finalDistance: 0
+                },
+                Beej: {
+                    address: "4762 E TIMBERLINE RD, GILBERT, AZ 85297",
+                    prelimDistance: 0,
+                    finalDistance: 0
+                },
+                Penny: {
+                    address: "Mesa, Arizona",
+                    prelimDistance: 0,
+                    finalDistance: 0
+                },
+                Kross: {
+                    address: "10427 Beryl Ave., Mentone, CA 92359",
+                    prelimDistance: 0,
+                    finalDistance: 0
+                },
+                Agee: {
+                    address: "Arizona City, AZ",
+                    prelimDistance: 0,
+                    finalDistance: 0
+                }
             };
             locator = new Locator({
                 url: "https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer"
